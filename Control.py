@@ -1,80 +1,158 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import time
 
-# Исходные данные
-L = 300                 # м
-A = 62.5                # м^2
-kappa = 0.7             # м^2/c
-po = 2*10**7            # Па
-k = 10**(-13)           # м^2
-mu = 10**(-3)           # Па*с
-B = 1.1                 # м^3/м^3
-Q = 2/(24*60*60)       # м^3/c
-T = 100*24*60*60        # с
 
-# Параметры прямой задачи
-# (I) изменяемые
-M = 20
-N = 1000
-# (II) зависимые от (I)
-h = L/M
-tau = T/N
+def implement_transfer_function(control_mass, time):
+    # character_indicator: характер поведения передаточной функции
+    # k: коэффициент усиления
+    # alpha: параметр передаточной функции
+    # beta: параметр передаточной функции
+    # Размер time
+    n = time.size
+    character_indicator = control_mass[1]
+    tz = control_mass[2]
+    k = control_mass[3]
+    alpha = control_mass[4]
+    beta = control_mass[5]
+    cv_plot1 = np.array([])
+    for i in range(n):
+        if time[0] < tz:
+            if character_indicator == 'growth':
+                cv_plot1 = np.append(cv_plot1, 0)
+            else:
+                cv_plot1 = np.append(cv_plot1, k)
+            time = np.delete(time, 0)
+    # Время начинается с нулевой отметки
+    time = time - min(time)
+    cv_plot2 = []
+    if character_indicator == 'growth':
+        if beta == 0:
+            cv_plot2 = k * (1 - np.exp(-alpha * time))
+        else:
+            cv_plot2 = k * (1 - np.exp(-alpha * time) * (alpha * np.sin(beta * time) / beta + np.cos(beta * time)))
+    if character_indicator == 'decrease':
+        cv_plot2 = k * np.exp(-alpha * time)
+    cv_plot = np.hstack((cv_plot1, cv_plot2))
+    return cv_plot
 
-a = - kappa*tau/h**2
-b = 1 - 2*a
-d = 2*mu*Q*B*h/(A*k)
+def deter_param_transfer_function(time, cv):
+    """
+    Метод определяет параметры колебательного звена 2-го порядка(частный случай - апериодическое звено 1-го порядка)
+    с помощью методов и классов библиотеки numpy
+    :param time: вектор моментов времени замера показателя CV
+    :param cv: вектор значений реакции CV на единичный импульс
+    :return: характерное поведение передаточной функции, параметры передаточной функции и строка для конфиг. файла
+    :rtype: list, str
+    """
+    # Рассматривается только прирост/падение значения
+    cv = cv - min(cv)
+    # Время начинается с нулевой отметки
+    time = time - min(time)
+    # Количество измерений
+    n = cv.size
+    # Начальное значение контролируемого параметра
+    init_value = cv[0]
+    # Значение стабилизации контролируемого параметра
+    stable_value = (cv[n-1]+cv[n-2]+cv[n-3]+cv[n-4])/4
+    # Максимальное значение
+    max_cv = max(cv)
+    # Определение времени задержки tz
+    # определим как момент времени, когда значение cv отличается
+    # от stable_value на 5 %
+    tz = 0
 
-# Массив для хранения значений на каждом слою
-p = np.zeros((N+1, M+1))
+    for i in range(n):
+        if np.abs(cv[0] - cv[1]) < np.abs(stable_value - init_value) * 0.05:
+            tz = time[0]
+            time = np.delete(time, 0)
+            cv = np.delete(cv, 0)
+        else:
+            i = n
 
-# Начальные условия
-for i in range(M+1):
-    p[0, i] = po
-# Граничные условия
-for j in range(1, N+1):
-    p[j, M] = po
+    # Количество измерений
+    n = cv.size
+    # Время начинается с нулевой отметки
+    time = time - min(time)
+    # Определение характера изменения
+    if init_value < stable_value:
+        character_indicator = 'growth'
+    else:
+        character_indicator = 'decrease'
 
-# Предупреждение
-if a == 0:
-    print("a=0")
+    # Параметры передаточной функции
+    alpha = 0
+    beta = 0
+    # Передаточная функция 1-го и 2-го порядка (роста)
+    transfer_name = ''
+    if character_indicator == 'growth':
+        k = stable_value
+        if abs(stable_value-max_cv) < 0.05*stable_value:
+            transfer_name = "type1"
+            beta = 0
+            # Определение параметра alpha
+            value_search = (1-np.exp(-1))*stable_value
+            try:
+                for i in range(n):
+                    if cv[i] > value_search:
+                        if time[i] != 0:
+                            alpha = 1/time[i]
+                        raise StopIteration
+            except StopIteration:
+                pass
+        else:
+            transfer_name = "type2"
+            time_ext = 1
+            try:
+                for i in range(n):
+                    if cv[i] == max_cv:
+                        time_ext = time[i]
+                        raise StopIteration
+            except StopIteration:
+                pass
+            beta = np.pi/time_ext
+            alpha = -(beta/np.pi)*np.log((max_cv-stable_value)/stable_value)
 
-# Формирование матрицы A
-A = np.zeros((M, M))
+    # Передаточная функция 1-го порядка (убывания)
+    if character_indicator == 'decrease':
+        transfer_name = "type3"
+        k = init_value
+        beta = 0
+        value_search = k*np.exp(-1)
+        # Определение параметра alpha
+        try:
+            for i in range(n):
+                if cv[i] < value_search:
+                    if time[i] != 0:
+                        alpha = 1/time[i]
+                    raise StopIteration
+        except StopIteration:
+            pass
 
-# Первая строчка
-A[0][0] = -2
-A[0][1] = 4 + b/a
-
-for i in range(1, M):
-    A[i][i-1] = a
-    A[i][i] = b
-    if i < M-1:
-        A[i][i+1] = a
-
-# Формирование правой части
-for j in range(0, N):
-    f = np.zeros((M))
-    f[0] = d + p[j][1]/a
-    for i in range(1, M-1):
-        f[i] = p[j][i]
-    f[M-1] = p[j][M-1] - a*p[j+1][M]
-
-    alpha = np.zeros((M))
-    beta = np.zeros((M))
-    alpha[1] = - A[0][1]/A[0][0]
-    beta[1] = f[0]/A[0][0]
-    for i in range(1, M-1):
-        alpha[i+1] = - A[i][i+1]/(A[i][i-1]*alpha[i]+A[i][i])
-        beta[i+1] = (f[i]-A[i][i-1]*beta[i])/(A[i][i-1]*alpha[i]+A[i][i])
-    p[j+1][M-1] = (f[M-1]-A[M-1][M-2]*beta[M-1])/(A[M-1][M-1]+A[M-1][M-2]*alpha[M-1])
-    for i in range(M-2, -1, -1):
-        p[j+1][i] = alpha[i+1]*p[j+1][i+1]+beta[i+1]
-
-x = np.linspace(0., L, M+1)
-
-for j in range(N+1):
-    plt.plot(x, p[j][:])
-    st = "Значение давления на " + str(int(j * tau/(60*60*24))) + "-ые сутки"
-    plt.title(st)
-plt.show()
+    # Определение момента стабилизации
+    t_min = min(time)
+    t_max = max(time)
+    nn = 100
+    t = np.linspace(t_min, t_max, nn)
+    tt = 0
+    if character_indicator == 'growth':
+        if beta == 0:
+            tt = - np.log(0.01 / k) / alpha
+        else:
+            tt = t[n - 1]
+            try:
+                for i in range(nn - 1, 0, -1):
+                    if abs(k - implement_transfer_function([transfer_name, character_indicator, tz, k, alpha, beta])) / k >= 0.01:
+                        tt = t[i]
+                        raise StopIteration
+            except StopIteration:
+                pass
+    else:
+            tt = - np.log(0.01)/alpha
+    # Строка для конфигурационного файла
+    str_csv = transfer_name + character_indicator + '_' + str(tz) + '_' + str(k) + '_' + str(alpha)\
+              + '_' + str(beta) + '_' + str(tt)
+    # Возвращаем массив
+    # transfer_name:
+    # "type1" = "Передаточная функция 1-го порядка (роста)"
+    # "type2" = "Передаточная функция 2-го порядка"
+    # "type3" = "Передаточная функция 1-го порядка (убывания)"
+    return [transfer_name, character_indicator, tz, k, alpha, beta, tt], str_csv
