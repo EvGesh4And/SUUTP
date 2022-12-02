@@ -363,6 +363,20 @@ def adjustment(b, mass_on, cv, name_cv_x):
     :return: строка модели для конфигурационного файла
     """
     n, n_cv = cv.shape
+
+    # Определяем массив X (да, можно было бы записать его и в цикл выше, но так легче понять суть)
+    ind = 0
+    x = []
+    for i in range(n_cv):
+        for j in mass_on[i, :]:
+            if j != 0:
+                if ind == 0:
+                    x = np.vstack(function_def(j, cv[:, i])).T
+                    ind = 1
+                else:
+                    x = np.vstack([x, function_def(j, cv[:, i])])
+    x = x.T
+    YY = x.dot(b)
     name_finish_x = function_name_config(b, mass_on, n_cv, name_cv_x)
     name_finish_x_short = function_name_user(mass_on, n_cv, name_cv_x)
     return name_finish_x_short, name_finish_x, YY
