@@ -88,7 +88,7 @@ def student(x, y):
             t_real = b[i] / np.sqrt(sigma2 * v[i, i])
         else:
             t_real = 0
-        t_real = b[i] / np.sqrt(sigma2 * v[i, i])
+        # t_real = b[i] / np.sqrt(sigma2 * v[i, i])
         p = 2 * (1 - sps.t(n - m).cdf(abs(t_real)))
         if p > 0.01:
             stud.append(i)
