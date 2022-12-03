@@ -1,5 +1,6 @@
 import numpy as np
-
+import matplotlib.pyplot as plt
+import random
 
 def implement_transfer_function(control_mass, time):
     # character_indicator: характер поведения передаточной функции
@@ -21,20 +22,17 @@ def implement_transfer_function(control_mass, time):
             else:
                 cv_plot1 = np.append(cv_plot1, k)
             time = np.delete(time, 0)
-    if len(time) != 0:
-        # Время начинается с нулевой отметки
-        time = time - min(time)
-        cv_plot2 = []
-        if character_indicator == 'growth':
-            if beta == 0:
-                cv_plot2 = k * (1 - np.exp(-alpha * time))
-            else:
-                cv_plot2 = k * (1 - np.exp(-alpha * time) * (alpha * np.sin(beta * time) / beta + np.cos(beta * time)))
-        if character_indicator == 'decrease':
-            cv_plot2 = k * np.exp(-alpha * time)
-        cv_plot = np.hstack((cv_plot1, cv_plot2))
-    else:
-        cv_plot = cv_plot1
+    # Время начинается с нулевой отметки
+    time = time - min(time)
+    cv_plot2 = []
+    if character_indicator == 'growth':
+        if beta == 0:
+            cv_plot2 = k * (1 - np.exp(-alpha * time))
+        else:
+            cv_plot2 = k * (1 - np.exp(-alpha * time) * (alpha * np.sin(beta * time) / beta + np.cos(beta * time)))
+    if character_indicator == 'decrease':
+        cv_plot2 = k * np.exp(-alpha * time)
+    cv_plot = np.hstack((cv_plot1, cv_plot2))
     return cv_plot
 
 def deter_param_transfer_function(time, cv):
@@ -143,7 +141,7 @@ def deter_param_transfer_function(time, cv):
             tt = t[n - 1]
             try:
                 for i in range(nn - 1, 0, -1):
-                    if abs(k - implement_transfer_function([transfer_name, character_indicator, tz, k, alpha, beta], np.array([tt]))) / k >= 0.01:
+                    if abs(k - implement_transfer_function([transfer_name, character_indicator, tz, k, alpha, beta])) / k >= 0.01:
                         tt = t[i]
                         raise StopIteration
             except StopIteration:
@@ -159,3 +157,105 @@ def deter_param_transfer_function(time, cv):
     # "type2" = "Передаточная функция 2-го порядка"
     # "type3" = "Передаточная функция 1-го порядка (убывания)"
     return [transfer_name, character_indicator, tz, k, alpha, beta, tt], str_csv
+
+time = np.linspace(0, 400, num=30)
+
+mass = time
+
+transfer_name = "type1"
+character_indicator = "growth"
+tz = 30
+k = 1.9
+alpha = 0.03
+beta = 0
+tt = 0
+
+cv_plot = implement_transfer_function([transfer_name, character_indicator, tz, k, alpha, beta, tt], time)
+for i in range(30):
+  if time[i] > tz+2 and i < 22:
+    cv_plot[i] = cv_plot[i] + (random.random()-0.5)*k*0.03
+
+mass = np.vstack([mass, cv_plot])
+
+transfer_name = "type1"
+character_indicator = "growth"
+tz = 0
+k = 12
+alpha = 0.03
+beta = 0.5
+tt = 0
+
+cv_plot = implement_transfer_function([transfer_name, character_indicator, tz, k, alpha, beta, tt], time)
+for i in range(30):
+  if time[i] > tz+2 and i < 15:
+    cv_plot[i] = cv_plot[i] + (random.random()-0.5)*k*0.03
+
+mass = np.vstack([mass, cv_plot])
+
+transfer_name = "type1"
+character_indicator = "growth"
+tz = 20
+k = -0.02
+alpha = 0.03
+beta = 0
+tt = 0
+
+cv_plot = implement_transfer_function([transfer_name, character_indicator, tz, k, alpha, beta, tt], time)
+for i in range(30):
+  if time[i] > tz+2 and i < 15:
+    cv_plot[i] = cv_plot[i] + (random.random()-0.5)*k*0.03
+
+mass = np.vstack([mass, cv_plot])
+
+transfer_name = "type1"
+character_indicator = "growth"
+tz = 0
+k = 0.01
+alpha = 0.02
+beta = 0
+tt = 0
+
+cv_plot = implement_transfer_function([transfer_name, character_indicator, tz, k, alpha, beta, tt], time)
+for i in range(30):
+  if time[i] > tz+2 and i < 15:
+    cv_plot[i] = cv_plot[i] + (random.random()-0.5)*k*0.03
+
+mass = np.vstack([mass, cv_plot])
+
+transfer_name = "type1"
+character_indicator = "growth"
+tz = 0
+k = 1
+alpha = 0.03
+beta = 0
+tt = 0
+
+cv_plot = implement_transfer_function([transfer_name, character_indicator, tz, k, alpha, beta, tt], time)
+for i in range(30):
+  if time[i] > tz+2 and i < 15:
+    cv_plot[i] = cv_plot[i] + (random.random()-0.5)*k*0.03
+
+mass = np.vstack([mass, cv_plot])
+
+transfer_name = "type1"
+character_indicator = "growth"
+tz = 40
+k = 0.034
+alpha = 0.04
+beta = 0
+tt = 0
+
+cv_plot = implement_transfer_function([transfer_name, character_indicator, tz, k, alpha, beta, tt], time)
+for i in range(30):
+  if time[i] > tz+2 and i < 15:
+    cv_plot[i] = cv_plot[i] + (random.random()-0.5)*k*0.03
+
+mass = np.vstack([mass, cv_plot])
+
+np.savetxt('UDK.ARP_p.NC_3599.csv', mass.T, delimiter=',')
+
+
+
+
+
+#np.savetxt('UDK.ARP_p.NC_3599.csv', np.vstack([time, cv_plot.T]).T, delimiter=',')
