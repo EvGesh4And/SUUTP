@@ -6,7 +6,7 @@ from scipy.optimize import Bounds
 from scipy.optimize import LinearConstraint
 
 
-def reading_configuration_file():
+def reading_configuration_file(config_file_VA = "Sens", config_file_MV = "Control_MV"):
     """
     Метод считывает из конфигурационных файлов Sens и Control данные, которые были
     сформированы в соответствующих модулях
@@ -17,7 +17,7 @@ def reading_configuration_file():
     model_sens_str = ''
     comparison_short = ''
     comparison_long = ''
-    with open('Sens', encoding='utf-8') as Sens_file:
+    with open(config_file_VA, encoding='utf-8') as Sens_file:
         file_reader_Sens = csv.reader(Sens_file, delimiter=",")
         sh = 0
         for row in file_reader_Sens:
@@ -46,7 +46,7 @@ def reading_configuration_file():
     beta = []
     T = []
 
-    with open('Control_MV', encoding='utf-8') as Control_MV_file:
+    with open(config_file_MV, encoding='utf-8') as Control_MV_file:
         file_reader_Control = csv.reader(Control_MV_file, delimiter=",")
         sh = 0
         n_mv = 0
@@ -91,65 +91,8 @@ def reading_configuration_file():
                 T.append(T_per)
     Control_MV_file.close()
 
-    # Считывание данных о переходных функциях для MV из конфигурационного файла модуля Control
-    dv_Control = []
-    dependency_dv = []
-    transfer_name_dv = []
-    character_indicator_dv = []
-    tz_dv = []
-    k_dv = []
-    alpha_dv = []
-    beta_dv = []
-    T_dv = []
-
-    with open('Control_DV', encoding='utf-8') as Control_DV_file:
-        file_reader_Control = csv.reader(Control_DV_file, delimiter=",")
-        sh = 0
-        n_dv = 0
-        for row in file_reader_Control:
-            dependency_dv_per = []
-            transfer_name_dv_per = []
-            character_indicator_dv_per = []
-            tz_dv_per = []
-            k_dv_per = []
-            alpha_dv_per = []
-            beta_dv_per = []
-            T_dv_per = []
-            if sh == 0:
-                row.pop(0)
-                dv_Control = row
-                n_dv = len(dv_Control)
-                sh += 1
-            else:
-                for i in range(n_dv):
-                    print(i)
-                    print(row)
-                    str_per = row[i+1].split("_")
-                    if str_per[0] != 'no_dependency':
-                        dependency_dv_per.append(1)
-                        transfer_name_dv_per.append(str_per[0])
-                        character_indicator_dv_per.append(str_per[1])
-                        tz_dv_per.append(float(str_per[2]))
-                        k_dv_per.append(float(str_per[3]))
-                        alpha_dv_per.append(float(str_per[4]))
-                        beta_dv_per.append(float(str_per[5]))
-                        T_dv_per.append(float(str_per[6]))
-                    else:
-                        dependency_dv_per.append(0)
-
-                dependency_dv.append(dependency_dv_per)
-                transfer_name_dv.append(transfer_name_dv_per)
-                character_indicator_dv.append(character_indicator_dv_per)
-                tz_dv.append(tz_dv_per)
-                k_dv.append(k_dv_per)
-                alpha_dv.append(alpha_dv_per)
-                beta_dv.append(beta_dv_per)
-                T_dv.append(T_dv_per)
-    Control_DV_file.close()
-
     return model_sens_str, comparison_short, comparison_long, mv_Control, cv_Control, dependency, \
-           transfer_name, character_indicator, tz, k, alpha, beta, T, dv_Control, dependency_dv, transfer_name_dv, \
-           character_indicator_dv, tz_dv, k_dv, alpha_dv, beta_dv, T_dv
+           transfer_name, character_indicator, tz, k, alpha, beta, T
 
 
 def implement_transfer_function(character_indicator, k, alpha, beta, time):
@@ -207,8 +150,8 @@ def establishing_connection_cv_mv(mass_n, n_max, s, mv_Control, cv_Control, N):
     n_mv = len(mv_Control)
     n_cv = len(cv_Control)
 
-    a, len_mv_value = mv_value.shape
-    b = len_mv_value - n_max
+    # a, len_mv_value = mv_value.shape
+    # b = len_mv_value - n_max
 
     mv_x = []
     for i in range(n_mv):
@@ -330,6 +273,7 @@ def core_optimize(mv_value, mass_cv_str_abc, mass_bounds, n_mv, n_cv, n_max, N, 
     x = res.x
 
     mv_x_predict = []
+
     for i in range(n_mv):
         mv_x_predict.append(x[i * N])
 
@@ -340,25 +284,27 @@ if __name__ == "__main__":
 
     # Формирование данных из config файлов Sens и Control
     model_sens_str, comparison_short, comparison_long, mv_Control, cv_Control, dependency, \
-    transfer_name, character_indicator, tz, k, alpha, beta, T, dv_Control, dependency_dv, transfer_name_dv, \
-    character_indicator_dv, tz_dv, k_dv, alpha_dv, beta_dv, T_dv = reading_configuration_file()
+    transfer_name, character_indicator, tz, k, alpha, beta, T = reading_configuration_file()
 
     # Интервал между выводом оптим. значений в БД
-    delta_T = 10
+    delta_T = 60
 
     # "Шаги в будущее"
     N = 5
-
-    # Массив MV из БД длины как минимум n_max
-    mv_value = np.array([[2, 5, 6, 8, 10, 11, 12, 15, 14, 13, 16, 13, 14, 16], \
-                         [2, 3, 4, 5, 7, 8, 9, 10, 8, 9, 10, 8, 9, 9]])
 
     mass_n, n_max, s = determination_n_s(delta_T, dependency, character_indicator, k, \
                                          alpha, beta, T, mv_Control, cv_Control)
 
     mass_cv_str_abc, mass_bounds = establishing_connection_cv_mv(mass_n, n_max, s, mv_Control, cv_Control, N)
 
-    k_treb = 500
+    #############################################################################
+    ######################## Можно циклить ######################################
+
+    # Массив MV из БД длины как минимум n_max
+    mv_value = np.array([[14, 16], \
+                         [9, 9]])
+
+    k_treb = 50
 
     n_cv = len(cv_Control)
     n_mv = len(mv_Control)
@@ -373,5 +319,4 @@ if __name__ == "__main__":
 
     # Границы для
     x, mv_x_predict = core_optimize(mv_value, mass_cv_str_abc, mass_bounds, n_mv, n_cv, n_max, N, mv_left_bounds,
-                                    mv_right_bounds, \
-                                    cv_left_bounds, cv_right_bounds)
+                                    mv_right_bounds, cv_left_bounds, cv_right_bounds)
