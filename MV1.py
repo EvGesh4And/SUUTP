@@ -159,7 +159,7 @@ def deter_param_transfer_function(time, cv):
     return [transfer_name, character_indicator, tz, k, alpha, beta, tt], str_csv
 
 time = np.linspace(0, 400, num=30)
-
+print(time)
 mass = time
 
 transfer_name = "type1"

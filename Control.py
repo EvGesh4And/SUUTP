@@ -16,11 +16,9 @@ def implement_transfer_function(control_mass, time):
     cv_plot1 = np.array([])
     for i in range(n):
         if time[0] < tz:
-            if character_indicator == 'growth':
-                cv_plot1 = np.append(cv_plot1, 0)
-            else:
-                cv_plot1 = np.append(cv_plot1, k)
+            cv_plot1 = np.append(cv_plot1, 0)
             time = np.delete(time, 0)
+
     if len(time) != 0:
         # Время начинается с нулевой отметки
         time = time - min(time)
@@ -31,13 +29,38 @@ def implement_transfer_function(control_mass, time):
             else:
                 cv_plot2 = k * (1 - np.exp(-alpha * time) * (alpha * np.sin(beta * time) / beta + np.cos(beta * time)))
         if character_indicator == 'decrease':
-            cv_plot2 = k * np.exp(-alpha * time)
+            cv_plot2 = k * np.exp(-alpha * time) - k
         cv_plot = np.hstack((cv_plot1, cv_plot2))
     else:
         cv_plot = cv_plot1
+
     return cv_plot
 
+
+def implement_transfer_function_x(character_indicator, tz,  k, alpha, beta, time):
+    # character_indicator: характер поведения передаточной функции
+    # k: коэффициент усиления
+    # alpha: параметр передаточной функции
+    # beta: параметр передаточной функции
+    # Размер time
+    if time < tz:
+        cv_plot = 0
+    else:
+        time = time - tz
+        # Время начинается с нулевой отметки
+        if character_indicator == 'growth':
+            if beta == 0:
+                cv_plot = k * (1 - np.exp(-alpha * time))
+            else:
+                cv_plot = k * (1 - np.exp(-alpha * time) * (alpha * np.sin(beta * time) / beta + np.cos(beta * time)))
+        if character_indicator == 'decrease':
+            cv_plot = k * np.exp(-alpha * time) - k
+    return cv_plot
+
+
 def deter_param_transfer_function(time, cv):
+    print(cv)
+    print(time)
     """
     Метод определяет параметры колебательного звена 2-го порядка(частный случай - апериодическое звено 1-го порядка)
     с помощью методов и классов библиотеки numpy
@@ -143,19 +166,19 @@ def deter_param_transfer_function(time, cv):
             tt = t[n - 1]
             try:
                 for i in range(nn - 1, 0, -1):
-                    if abs(k - implement_transfer_function([transfer_name, character_indicator, tz, k, alpha, beta], np.array([tt]))) / k >= 0.01:
+                    if abs(k - implement_transfer_function_x([transfer_name, character_indicator, tz, k, alpha, beta], tt)) / k >= 0.01:
                         tt = t[i]
                         raise StopIteration
             except StopIteration:
                 pass
     else:
-            tt = - np.log(0.01)/alpha
+        tt = - np.log(0.01)/alpha
     # Строка для конфигурационного файла
     str_csv = transfer_name + character_indicator + '_' + str(tz) + '_' + str(k) + '_' + str(alpha)\
               + '_' + str(beta) + '_' + str(tt)
     # Возвращаем массив
-    # transfer_name:
-    # "type1" = "Передаточная функция 1-го порядка (роста)"
-    # "type2" = "Передаточная функция 2-го порядка"
-    # "type3" = "Передаточная функция 1-го порядка (убывания)"
+    #transfer_name:
+    #"type1" = "Передаточная функция 1-го порядка (роста)"
+    #"type2" = "Передаточная функция 2-го порядка"
+    #"type3" = "Передаточная функция 1-го порядка (убывания)"
     return [transfer_name, character_indicator, tz, k, alpha, beta, tt], str_csv
