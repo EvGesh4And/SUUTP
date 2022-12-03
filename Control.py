@@ -161,7 +161,7 @@ def deter_param_transfer_function(time, cv):
     tt = 0
     if character_indicator == 'growth':
         if beta == 0:
-            tt = - np.log(0.01 / k) / alpha
+            tt = - np.log(0.01)/alpha
         else:
             tt = t[n - 1]
             try:
@@ -182,3 +182,4 @@ def deter_param_transfer_function(time, cv):
     #"type2" = "Передаточная функция 2-го порядка"
     #"type3" = "Передаточная функция 1-го порядка (убывания)"
     return [transfer_name, character_indicator, tz, k, alpha, beta, tt], str_csv
+

@@ -69,7 +69,7 @@ def reading_configuration_file(config_file_VA = "Sens", config_file_MV = "Contro
                 cv_Control.append(row[0])
                 for i in range(n_mv):
                     str_per = row[i+1].split("_")
-                    if str_per[0] != 'no_dependency':
+                    if str_per[0] != 'independent':
                         dependency_per.append(1)
                         transfer_name_per.append(str_per[0])
                         character_indicator_per.append(str_per[1])
@@ -80,6 +80,13 @@ def reading_configuration_file(config_file_VA = "Sens", config_file_MV = "Contro
                         T_per.append(float(str_per[6]))
                     else:
                         dependency_per.append(0)
+                        transfer_name_per.append('type0')
+                        character_indicator_per.append('no')
+                        tz_per.append(0.)
+                        k_per.append(0.)
+                        alpha_per.append(0.)
+                        beta_per.append(0.)
+                        T_per.append(0.)
 
                 dependency.append(dependency_per)
                 transfer_name.append(transfer_name_per)
@@ -136,6 +143,8 @@ def determination_n_s(delta_T, dependency, character_indicator, tz, k, alpha, be
                     w.append(implement_transfer_function_x(character_indicator[i][j], tz[i][j], k[i][j], alpha[i][j], beta[i][j],\
                     delta_T*(p+1)))
                 s_per.append(w)
+            else:
+                s_per.append([])
         s.append(s_per)
 
     return mass_n, n_max, s
@@ -289,28 +298,32 @@ if __name__ == "__main__":
 
     mass_n, n_max, s = determination_n_s(delta_T, dependency, character_indicator, tz, k, \
                                          alpha, beta, T, mv_Control, cv_Control)
-
+    print(n_max)
+    print(s)
+    print(T)
     mass_cv_str_abc, mass_bounds = establishing_connection_cv_mv(mass_n, n_max, s, mv_Control, cv_Control, N)
 
     #############################################################################
     ######################## Можно циклить ######################################
 
     # Массив MV из БД длины как минимум n_max
-    mv_value = np.array([[14, 16], \
-                         [9, 9]])
+    mv_value = np.array([[60, 65, 70, 70, 70, 70, 70], \
+                         [70, 70, 70, 70, 70, 70, 70],
+                         [90, 90, 90, 90, 90, 90, 90],
+                         [60, 60, 60, 60, 60, 60, 60]])
 
-    k_treb = 50
+    k_treb = 70
 
     n_cv = len(cv_Control)
     n_mv = len(mv_Control)
 
     # Границы для MV
-    mv_left_bounds = [0, 0]
-    mv_right_bounds = [20, 10]
+    mv_left_bounds = [50, 64, 80, 45]
+    mv_right_bounds = [100, 100, 100, 100]
 
     # Границы для CV
-    cv_left_bounds = [0, 0, 0, 0]
-    cv_right_bounds = [200, 400, 600, 1400]
+    cv_left_bounds = [25, 50, 200, 25, 1.5, 120, 1.5, 0, 80, 60]
+    cv_right_bounds = [190, 1200, 250, 30, 3, 140, 3, 30, 125, 120]
 
     # Границы для
     x, mv_x_predict = core_optimize(mv_value, mass_cv_str_abc, mass_bounds, n_mv, n_cv, n_max, N, mv_left_bounds,
