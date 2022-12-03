@@ -47,9 +47,9 @@ t = np.zeros(N)
 for i in range(N):
     t[i] = i*60
 
-np.savetxt('lab_cv.csv', np.vstack([t, cv[:, :-2].T]).T, delimiter=',')
-np.savetxt('lab_k1.csv', np.vstack([t, cv[:, 10]]).T, delimiter=',')
-np.savetxt('lab_k2.csv', np.vstack([t, cv[:, 11]]).T, delimiter=',')
-print(k1)
+# np.savetxt('lab_cv.csv', np.vstack([t, cv[:, :-2].T]).T, delimiter=',')
+# np.savetxt('lab_k1.csv', np.vstack([t, cv[:, 10]]).T, delimiter=',')
+# np.savetxt('lab_k2.csv', np.vstack([t, cv[:, 11]]).T, delimiter=',')
+print(min(cv[:, 11]))
 
 

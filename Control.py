@@ -174,7 +174,7 @@ def deter_param_transfer_function(time, cv):
     else:
         tt = - np.log(0.01)/alpha
     # Строка для конфигурационного файла
-    str_csv = transfer_name + character_indicator + '_' + str(tz) + '_' + str(k) + '_' + str(alpha)\
+    str_csv = transfer_name + '_' + character_indicator + '_' + str(tz) + '_' + str(k) + '_' + str(alpha)\
               + '_' + str(beta) + '_' + str(tt)
     # Возвращаем массив
     #transfer_name:
