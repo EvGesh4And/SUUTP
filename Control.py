@@ -166,7 +166,7 @@ def deter_param_transfer_function(time, cv):
             tt = t[n - 1]
             try:
                 for i in range(nn - 1, 0, -1):
-                    if abs(k - implement_transfer_function_x([transfer_name, character_indicator, tz, k, alpha, beta], tt)) / k >= 0.01:
+                    if abs(k - implement_transfer_function_x(character_indicator, tz, k, alpha, beta, tt)) / k >= 0.01:
                         tt = t[i]
                         raise StopIteration
             except StopIteration:
