@@ -185,37 +185,21 @@ def deter_param_transfer_function(time, cv):
     #"type3" = "Передаточная функция 1-го порядка (убывания)"
     return [transfer_name, character_indicator, tz, k, alpha, beta, tt], str_csv
 
-time = np.linspace(0, 500, num=50)
+time = np.linspace(0, 300, num=30)
 
 mass = time
 
 transfer_name = "type1"
 character_indicator = "growth"
-tz = 40
-k = 1
-alpha = 0.015
-beta = 0
+tz = 30
+k = 2.5
+alpha = 0.05
+beta = 0.01
 tt = 0
 
 cv_plot = implement_transfer_function([transfer_name, character_indicator, tz, k, alpha, beta, tt], time)
-for i in range(50):
-  if time[i] > tz+3 and i < 35:
-    cv_plot[i] = cv_plot[i] + (random.random()-0.5)*k*0.03
-
-mass = np.vstack([mass, cv_plot])
-
-
-transfer_name = "type1"
-character_indicator = "decrease"
-tz = 20
-k = 0.004
-alpha = 0.015
-beta = 0
-tt = 0
-
-cv_plot = implement_transfer_function([transfer_name, character_indicator, tz, k, alpha, beta, tt], time)
-for i in range(50):
-  if time[i] > tz+3 and i < 35:
+for i in range(30):
+  if time[i] > tz+3 and i < 20:
     cv_plot[i] = cv_plot[i] + (random.random()-0.5)*k*0.03
 
 mass = np.vstack([mass, cv_plot])
@@ -223,20 +207,54 @@ mass = np.vstack([mass, cv_plot])
 
 transfer_name = "type1"
 character_indicator = "growth"
-tz = 20
-k = 1.2
-alpha = 0.03
-beta = 0.001
+tz = 30
+k = 0.31
+alpha = 0.08
+beta = 0.04
 tt = 0
 
 cv_plot = implement_transfer_function([transfer_name, character_indicator, tz, k, alpha, beta, tt], time)
-for i in range(50):
-  if time[i] > tz+3 and i < 35:
+for i in range(30):
+  if time[i] > tz+3 and i < 20:
     cv_plot[i] = cv_plot[i] + (random.random()-0.5)*k*0.03
 
 mass = np.vstack([mass, cv_plot])
 
-np.savetxt('UDK.ARP_v.NC_3381.csv', mass.T, delimiter=',')
+
+transfer_name = "type1"
+character_indicator = "growth"
+tz = 30
+k = 0.02
+alpha = 0.02
+beta = 0.04
+tt = 0
+
+cv_plot = implement_transfer_function([transfer_name, character_indicator, tz, k, alpha, beta, tt], time)
+for i in range(30):
+  if time[i] > tz+3 and i < 20:
+    cv_plot[i] = cv_plot[i] + (random.random()-0.5)*k*0.03
+
+mass = np.vstack([mass, cv_plot])
+
+transfer_name = "type1"
+character_indicator = "growth"
+tz = 30
+k = 0.2
+alpha = 0.015
+beta = 0.045
+tt = 0
+
+cv_plot = implement_transfer_function([transfer_name, character_indicator, tz, k, alpha, beta, tt], time)
+for i in range(30):
+  if time[i] > tz+3 and i < 20:
+    cv_plot[i] = cv_plot[i] + (random.random()-0.5)*k*0.03
+
+mass = np.vstack([mass, cv_plot])
+
+
+
+
+np.savetxt('UDK.K_301.NC_3455.csv', mass.T, delimiter=',')
 
 
 

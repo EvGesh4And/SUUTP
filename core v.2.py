@@ -95,35 +95,30 @@ def reading_configuration_file(config_file_VA = "Sens", config_file_MV = "Contro
            transfer_name, character_indicator, tz, k, alpha, beta, T
 
 
-def implement_transfer_function(character_indicator, k, alpha, beta, time):
-    """
-    Метод по заданным параметрам возвращает вектор значений передаточной функции для вектора времени time
-    с помощью методов и классов библиотеки numpy
-    :param character_indicator: характер поведения передаточной функции
-    :type character_indicator: str
-    :param k: коэффициент усиления
-    :type k: float
-    :param alpha: параметр передаточной функции
-    :type alpha: float
-    :param beta: параметр передаточной функции
-    :type beta: float
-    :param time: вектор времени
-    :type time: numpy.ndarray
-    :return: значения переходной функции с заданными параметрами в моменты времени time
-    :rtype: numpy.ndarray
-    """
-    cv = []
-    if character_indicator == 'growth':
-        if beta == 0:
-            cv = k*(1-np.exp(-alpha*time))
-        else:
-            cv = k*(1-np.exp(-alpha*time)*(alpha*np.sin(beta*time)/beta+np.cos(beta*time)))
-    if character_indicator == 'decrease':
-        cv = k * np.exp(-alpha * time) - k
-    return cv
+def implement_transfer_function_x(character_indicator, tz,  k, alpha, beta, time):
+    # character_indicator: характер поведения передаточной функции
+    # k: коэффициент усиления
+    # alpha: параметр передаточной функции
+    # beta: параметр передаточной функции
+    # Размер time
+    cv_plot = 0
+    if time < tz:
+        cv_plot = 0
+    else:
+        time = time - tz
+        # Время начинается с нулевой отметки
+        if character_indicator == 'growth':
+            if beta == 0:
+                cv_plot = k * (1 - np.exp(-alpha * time))
+            else:
+                cv_plot = k * (1 - np.exp(-alpha * time) * (alpha * np.sin(beta * time) / beta + np.cos(beta * time)))
+        if character_indicator == 'decrease':
+            cv_plot = k * np.exp(-alpha * time) - k
+
+    return cv_plot
 
 
-def determination_n_s(delta_T, dependency, character_indicator, k, alpha, beta, T, mv_Control, cv_Control):
+def determination_n_s(delta_T, dependency, character_indicator, tz, k, alpha, beta, T, mv_Control, cv_Control):
     n_mv = len(mv_Control)
     n_cv = len(cv_Control)
     mass_n = np.zeros((n_cv, n_mv), int)
@@ -138,7 +133,7 @@ def determination_n_s(delta_T, dependency, character_indicator, k, alpha, beta, 
                     n_max = mass_n[i, j]
                 w = []
                 for p in range(0, mass_n[i, j]):
-                    w.append(implement_transfer_function(character_indicator[i][j], k[i][j], alpha[i][j], beta[i][j],\
+                    w.append(implement_transfer_function_x(character_indicator[i][j], tz[i][j], k[i][j], alpha[i][j], beta[i][j],\
                     delta_T*(p+1)))
                 s_per.append(w)
         s.append(s_per)
@@ -196,7 +191,7 @@ def establishing_connection_cv_mv(mass_n, n_max, s, mv_Control, cv_Control, N):
 
 
 def core_optimize(mv_value, mass_cv_str_abc, mass_bounds, n_mv, n_cv, n_max, N, mv_left_bounds, mv_right_bounds,\
-                  cv_left_bounds, cv_right_bounds):
+                  cv_left_bounds, cv_right_bounds, k_treb):
     # Определение размеров массива данны MV (мин. длинна n_max)
     a, len_mv_value = mv_value.shape
     b = len_mv_value - n_max
@@ -292,7 +287,7 @@ if __name__ == "__main__":
     # "Шаги в будущее"
     N = 5
 
-    mass_n, n_max, s = determination_n_s(delta_T, dependency, character_indicator, k, \
+    mass_n, n_max, s = determination_n_s(delta_T, dependency, character_indicator, tz, k, \
                                          alpha, beta, T, mv_Control, cv_Control)
 
     mass_cv_str_abc, mass_bounds = establishing_connection_cv_mv(mass_n, n_max, s, mv_Control, cv_Control, N)
@@ -319,5 +314,5 @@ if __name__ == "__main__":
 
     # Границы для
     x, mv_x_predict = core_optimize(mv_value, mass_cv_str_abc, mass_bounds, n_mv, n_cv, n_max, N, mv_left_bounds,
-                                    mv_right_bounds, cv_left_bounds, cv_right_bounds)
+                                    mv_right_bounds, cv_left_bounds, cv_right_bounds, k_treb)
     print(mv_x_predict)
