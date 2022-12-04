@@ -1,6 +1,8 @@
 import numpy as np
 import csv
 import math
+import random
+
 
 def reading_configuration_file(config_file_MV = "Control_MV"):
     """
@@ -142,6 +144,7 @@ def zn_cv_mv(mass_n, n_max, s, mv_value,  n_mv, n_cv):
                         cv_per += s[i][j][w] * delta_mv_value[j, n_max - 2 - w]
                     else:
                         cv_per += s[i][j][n - 1] * mv_value[j, n_max - n]
+        cv_per = cv_per + (0.5 - random.random()) *  cv_per * 0.03
         cv.append(cv_per)
     return cv
 
