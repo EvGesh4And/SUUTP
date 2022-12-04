@@ -303,7 +303,7 @@ if __name__ == "__main__":
     # Массив MV из БД длины как минимум n_max
     mv_value = np.array([[14, 16], \
                          [9, 9]])
-
+    print(mass_n)
     k_treb = 50
 
     n_cv = len(cv_Control)
