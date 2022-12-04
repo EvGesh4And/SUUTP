@@ -203,7 +203,7 @@ def establishing_connection_cv_mv(mass_n, n_max, s, mv_Control, cv_Control, N):
 
 
 def core_optimize(mv_value, mass_cv_str_abc, mass_bounds, n_mv, n_cv, n_max, N, mv_left_bounds, mv_right_bounds,\
-                  cv_left_bounds, cv_right_bounds, k_treb):
+                  cv_left_bounds, cv_right_bounds, delta_mv_left_bounds,  delta_mv_right_bounds, k_treb):
     # Определение размеров массива данны MV (мин. длинна n_max)
     a, len_mv_value = mv_value.shape
     b = len_mv_value - n_max
@@ -251,21 +251,20 @@ def core_optimize(mv_value, mass_cv_str_abc, mass_bounds, n_mv, n_cv, n_max, N, 
 
                 ww += 1
         fun_model += '+' + '(' + str(k_treb) + '-(' + model_sens_str_per + '))**2'
-        print("Model: ")
-        print(model_sens_str_per)
+
     fun = lambda x: eval(fun_model)
 
     # Границы для MV
-    mv_left_bounds_full = []
-    mv_right_bounds_full = []
+    delta_mv_left_bounds_full = []
+    delta_mv_right_bounds_full = []
 
     n_mv = len(mv_Control)
     for i in range(n_mv):
         for j in range(N):
-            mv_left_bounds_full.append(mv_left_bounds[i])
-            mv_right_bounds_full.append(mv_right_bounds[i])
+            delta_mv_left_bounds_full.append(delta_mv_left_bounds[i])
+            delta_mv_right_bounds_full.append(delta_mv_right_bounds[i])
 
-    bounds = Bounds(mv_left_bounds_full, mv_right_bounds_full)
+    bounds = Bounds(delta_mv_left_bounds_full, delta_mv_right_bounds_full)
 
     # Границы для CV
     cv_left_bounds_full = []
@@ -277,11 +276,25 @@ def core_optimize(mv_value, mass_cv_str_abc, mass_bounds, n_mv, n_cv, n_max, N, 
             cv_left_bounds_full.append(cv_left_bounds[i]-mass_sum[i][j])
             cv_right_bounds_full.append(cv_right_bounds[i]-mass_sum[i][j])
 
+    for i in range(n_mv):
+        for w in range(N):
+            mass_bounds_per = []
+            for j in range(n_mv * N):
+                mass_bounds_per.append(0.)
+            for j in range(w+1):
+                mass_bounds_per[i*N + j] = 1.
+            mass_bounds.append(mass_bounds_per)
+
+    for i in range(n_mv):
+        for w in range(N):
+            cv_left_bounds_full.append(mv_left_bounds[i]-mv_value[i][len_mv_value-1])
+            cv_right_bounds_full.append(mv_right_bounds[i]-mv_value[i][len_mv_value-1])
+
     linear_constraint = LinearConstraint(mass_bounds, cv_left_bounds_full, cv_right_bounds_full)
 
     x0 = np.zeros(n_mv*N)
 
-    print(cv_left_bounds_full)
+
     res = minimize(fun, x0, method='trust-constr', bounds=bounds,  constraints=linear_constraint)
     x = res.x
 
@@ -314,7 +327,7 @@ if __name__ == "__main__":
     ######################## Можно циклить ######################################
 
     # Массив MV из БД длины как минимум n_max
-    mv_value = np.array([[60, 65, 70, 70, 70, 70, 70], \
+    mv_value = np.array([[60, 65, 70, 70, 70, 70, 70],
                          [70, 70, 70, 70, 70, 70, 70],
                          [90, 90, 90, 90, 90, 90, 90],
                          [60, 60, 60, 60, 60, 60, 60]])
@@ -325,8 +338,11 @@ if __name__ == "__main__":
     n_mv = len(mv_Control)
 
     # Границы для MV
-    mv_left_bounds = [-5, -5, -5, -5]
-    mv_right_bounds = [5, 5, 5, 5]
+    delta_mv_left_bounds = [-5, -5, -5, -5]
+    delta_mv_right_bounds = [5, 5, 5, 5]
+
+    mv_left_bounds = [50, 64, 80, 45]
+    mv_right_bounds = [100, 100, 100, 100]
 
     # Границы для CV
     cv_left_bounds = [120, 1.5, 60, 0, 80, 200, 25, 1.5, 25, 50]
@@ -334,5 +350,6 @@ if __name__ == "__main__":
 
     # Границы для
     x, mv_x_predict = core_optimize(mv_value, mass_cv_str_abc, mass_bounds, n_mv, n_cv, n_max, N, mv_left_bounds,
-                                    mv_right_bounds, cv_left_bounds, cv_right_bounds, k_treb)
+                                    mv_right_bounds, cv_left_bounds, cv_right_bounds, delta_mv_left_bounds,
+                                    delta_mv_right_bounds, k_treb)
     print(mv_x_predict)
