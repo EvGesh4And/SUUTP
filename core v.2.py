@@ -178,18 +178,21 @@ def establishing_connection_cv_mv(mass_n, n_max, s, mv_Control, cv_Control, N):
                     delta_mv_abc.append(mv_x[j][w])
                 sch = 0
                 for w in range(k):
-                    if w < n:
-                        mass_bounds_per.append(s[i][j][w])
-                        if s[i][j][w] > 0:
-                            str_per += "+" + str(s[i][j][w]) + '*' + delta_mv_abc[k-w-1]
-                        if s[i][j][w] < 0:
-                            str_per += str(s[i][j][w]) + '*' + delta_mv_abc[k-w-1]
+                    if dependency[i][j] == 1:
+                        if w < n:
+                            mass_bounds_per.append(s[i][j][w])
+                            if s[i][j][w] > 0:
+                                str_per += "+" + str(s[i][j][w]) + '*' + delta_mv_abc[k-w-1]
+                            if s[i][j][w] < 0:
+                                str_per += str(s[i][j][w]) + '*' + delta_mv_abc[k-w-1]
+                        else:
+                            mass_bounds_per.append(s[i][j][n-1])
+                            if s[i][j][n-1] > 0:
+                                str_per += "+" + str(s[i][j][n-1]) + '*' + delta_mv_abc[k-w-1]
+                            if s[i][j][n-1] < 0:
+                                str_per += str(s[i][j][n-1]) + '*' + delta_mv_abc[k-w-1]
                     else:
-                        mass_bounds_per.append(s[i][j][n-1])
-                        if s[i][j][n-1] > 0:
-                            str_per += "+" + str(s[i][j][n-1]) + '*' + delta_mv_abc[k-w-1]
-                        if s[i][j][n-1] < 0:
-                            str_per += str(s[i][j][n-1]) + '*' + delta_mv_abc[k-w-1]
+                        mass_bounds_per.append(0)
                     sch += 1
                 for w in range(k, N):
                     mass_bounds_per.append(0)
@@ -206,7 +209,7 @@ def core_optimize(mv_value, mass_cv_str_abc, mass_bounds, n_mv, n_cv, n_max, N, 
     b = len_mv_value - n_max
 
     # Заполнение массива разности MV (длина: n_max-1)
-    delta_mv_value = np.zeros((n_mv, n_max - 1), int)
+    delta_mv_value = np.zeros((n_mv, n_max - 1), float)
     for i in range(n_mv):
         for j in range(n_max - 1):
             delta_mv_value[i, j] = mv_value[i, b + j + 1] - mv_value[i, b + j]
@@ -218,16 +221,17 @@ def core_optimize(mv_value, mass_cv_str_abc, mass_bounds, n_mv, n_cv, n_max, N, 
         for k in range(1, N + 1):
             sum = 0
             for j in range(n_mv):
-                n = mass_n[i][j]
-                if k >= n:
-                    sum += s[i][j][n - 1] * mv_value[j, len_mv_value - 1]
-                else:
-                    m = n - k
-                    w = 0
-                    while w != m:
-                        sum += s[i][j][k + w] * delta_mv_value[j, n_max - 2 - w]
-                        w += 1
-                    sum += s[i][j][n - 1] * mv_value[j, len_mv_value - 1 - w]
+                if dependency[i][j] == 1:
+                    n = mass_n[i][j]
+                    if k >= n:
+                        sum += s[i][j][n - 1] * mv_value[j, len_mv_value - 1]
+                    else:
+                        m = n - k
+                        w = 0
+                        while w != m:
+                            sum += s[i][j][k + w] * delta_mv_value[j, n_max - 2 - w]
+                            w += 1
+                        sum += s[i][j][n - 1] * mv_value[j, len_mv_value - 1 - w]
             mass_sum_per.append(sum)
         mass_sum.append(mass_sum_per)
 
@@ -238,13 +242,17 @@ def core_optimize(mv_value, mass_cv_str_abc, mass_bounds, n_mv, n_cv, n_max, N, 
     for i in range(N):
         model_sens_str_per = model_sens_str
         for j in range(n_cv):
+            ww = 0
             for k in cv_Control:
                 for w in range(n_comparison_short):
                     if k == comparison_short[0][w]:
                         model_sens_str_per = model_sens_str_per.replace(comparison_short[1][w],\
-                        '(' + str(mass_sum[j][i]) + mass_cv_str_abc[j][i] + ')')
-        fun_model += '+' + '(' + str(k_treb) + '-(' + model_sens_str_per + '))**2'
+                        '(' + str(mass_sum[ww][i]) + mass_cv_str_abc[ww][i] + ')')
 
+                ww += 1
+        fun_model += '+' + '(' + str(k_treb) + '-(' + model_sens_str_per + '))**2'
+        print("Model: ")
+        print(model_sens_str_per)
     fun = lambda x: eval(fun_model)
 
     # Границы для MV
@@ -273,6 +281,7 @@ def core_optimize(mv_value, mass_cv_str_abc, mass_bounds, n_mv, n_cv, n_max, N, 
 
     x0 = np.zeros(n_mv*N)
 
+    print(cv_left_bounds_full)
     res = minimize(fun, x0, method='trust-constr', bounds=bounds,  constraints=linear_constraint)
     x = res.x
 
@@ -298,9 +307,7 @@ if __name__ == "__main__":
 
     mass_n, n_max, s = determination_n_s(delta_T, dependency, character_indicator, tz, k, \
                                          alpha, beta, T, mv_Control, cv_Control)
-    print(n_max)
-    print(s)
-    print(T)
+
     mass_cv_str_abc, mass_bounds = establishing_connection_cv_mv(mass_n, n_max, s, mv_Control, cv_Control, N)
 
     #############################################################################
@@ -312,18 +319,18 @@ if __name__ == "__main__":
                          [90, 90, 90, 90, 90, 90, 90],
                          [60, 60, 60, 60, 60, 60, 60]])
 
-    k_treb = 70
+    k_treb = 80
 
     n_cv = len(cv_Control)
     n_mv = len(mv_Control)
 
     # Границы для MV
-    mv_left_bounds = [50, 64, 80, 45]
-    mv_right_bounds = [100, 100, 100, 100]
+    mv_left_bounds = [-5, -5, -5, -5]
+    mv_right_bounds = [5, 5, 5, 5]
 
     # Границы для CV
-    cv_left_bounds = [25, 50, 200, 25, 1.5, 120, 1.5, 0, 80, 60]
-    cv_right_bounds = [190, 1200, 250, 30, 3, 140, 3, 30, 125, 120]
+    cv_left_bounds = [120, 1.5, 60, 0, 80, 200, 25, 1.5, 25, 50]
+    cv_right_bounds = [140, 3, 120, 30, 125, 250, 30, 3, 190, 1200]
 
     # Границы для
     x, mv_x_predict = core_optimize(mv_value, mass_cv_str_abc, mass_bounds, n_mv, n_cv, n_max, N, mv_left_bounds,
